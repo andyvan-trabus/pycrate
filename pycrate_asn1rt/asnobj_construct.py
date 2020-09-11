@@ -91,6 +91,45 @@ Specific attributes:
         if val[0] in self._cont:
             self._cont[val[0]]._safechk_bnd(val[1])
     
+    def set_default_val(self, include_optional=False):
+        """
+        Set default value
+        """
+        # print("CHOICE:set_default_val('%s', %s)" % (self._name, str(include_optional)))
+        # print("  _cont is %s" % str(self._cont))
+        # print("  _root is %s" % str(self._root))
+
+        # if self._ext is not None:
+            # print("EXT IS NOT NONE")
+
+        # Choices are in self._cont
+        # Iterate through and pick choice with smallest complexity?
+        lowest_complexity = None
+        lowest_choice = None
+        for choice, choice_type in self._cont.items():
+            # print("choice: '%s', choice_type: %s" % (choice, str(choice_type)))
+            complex_score, depth = choice_type.get_complexity()
+            # print("Complexity for %s is %d" % (choice, complex_score))
+
+            # Skip the trivial criticalExtensionsFuture choices
+            if complex_score != 0 and (lowest_choice is None or complex_score < lowest_complexity):
+                lowest_choice = choice
+                lowest_complexity = complex_score
+
+        # print("Lowest complexity is %d" % lowest_complexity)
+        # print("Lowest choice is '%s'" % lowest_choice)
+
+        # Now we need to construct the value to store.
+        choice = self._cont[lowest_choice]
+
+        # print("Calling set_default_val() on choice")
+        choice.set_default_val(include_optional)
+        # print("After calling set_default_val in CHOICE::set_default_val")
+
+        # Store as new value
+        self._val = (lowest_choice, choice._val)
+        # print("Leaving CHOICE:set_default_val")
+
     ###
     # conversion between internal value and ASN.1 syntax
     ###
@@ -586,6 +625,19 @@ Specific attributes:
 #------------------------------------------------------------------------------#
 
 class _CONSTRUCT(ASN1Obj):
+
+
+    def set_default_val(self):
+        """
+        """
+        print("_CONSTRUCT:set_default_val('%s')" % self._name)
+        print("  _cont is %s" % str(self._cont))
+        print("  _root is %s" % str(self._root))
+        print("***********************************************************************************************")
+        print("***********************************************************************************************")
+        print("***********************************************************************************************")
+
+        # Probably need to iterate through _cont and call set_default_val on each item.
     
     # this class implements the methods that are common to SEQ and SET
     
@@ -597,6 +649,7 @@ class _CONSTRUCT(ASN1Obj):
                 if rec:
                     self._cont[k]._safechk_val(val[k])
             elif not re.match('_ext_[0-9]{1,}', k) or not isinstance(val[k], bytes_types):
+                print("'%s' is not in %s" % (str(k), str(self._cont)))
                 raise(ASN1ObjErr('{0}: invalid value, {1!r}'.format(self.fullname(), val)))
         self._safechk_valcompl(val)
     
@@ -1181,7 +1234,7 @@ Single value: Python dict
 Specific attributes:
     
     - cont: ASN1Dict {ident (str): ASN1Obj instance},
-        provides the content of the CHOICE object
+        provides the content of the SEQ object
     
     - cont_tags: dict with {tag (int): identifier (str)},
         provides a lookup table for tag value to components
@@ -1208,6 +1261,36 @@ Specific attributes:
     
     TYPE  = TYPE_SEQ
     TAG   = 16
+
+
+    def set_default_val(self, include_optional=False):
+        """
+        Set default value
+        _val is a dictionary
+        """
+        # print("SEQ:set_default_val('%s', %s)" % (self._name, str(include_optional)))
+        # print("  _cont is %s" % str(self._cont))
+        # print("  _root is %s" % str(self._root))
+        # print("  _root_mand is %s" % str(self._root_mand))
+        # print("  _root_opt is %s" % str(self._root_opt))
+
+        # Iterate through all components
+        new_val = {}
+        # for comp_name in self._root_mand:
+        for comp_name in self._cont.keys():
+            # Get object for comp
+            comp_object = self._cont[comp_name]
+
+            if include_optional or comp_name in self._root_mand:
+                # print("Calling set_default_val() on '%s'" % comp_name)
+                comp_object.set_default_val(include_optional)
+                # print("After calling set_default_val in SEQ::set_default_val")
+
+                new_val[comp_name] = comp_object._val
+
+        self._val = new_val
+        # print("SEQ::set_default_val('%s') leaving" % self._name)
+
     
     ###
     # conversion between internal value and ASN.1 syntax
@@ -1660,6 +1743,17 @@ Specific attributes:
     
     TYPE  = TYPE_SET
     TAG   = 17
+
+    def set_default_val(self, include_optional=False):
+        """
+        """
+        print("SET:set_default_val('%s')" % self._name)
+        print("_cont is %s" % str(self._cont))
+        print("_root is %s" % str(self._root))
+        print("***********************************************************************************************")
+        print("***********************************************************************************************")
+        print("***********************************************************************************************")
+
     
     ###
     # conversion between internal value and ASN.1 syntax
@@ -2011,6 +2105,17 @@ Specific attributes:
 class _CONSTRUCT_OF(ASN1Obj):
     
     # this class implements the methods that are common to SEQ and SET
+
+    def set_default_val(self, include_optional=False):
+        """
+        """
+        print("_CONSTRUCT_OF:set_default_val('%s')" % self._name)
+        print("_cont is %s" % str(self._cont))
+        print("_root is %s" % str(self._root))
+        print("***********************************************************************************************")
+        print("***********************************************************************************************")
+        print("***********************************************************************************************")
+
     
     # this is to potentially limit the length of the encoded content
     _ENC_MAXLEN = None
@@ -2602,6 +2707,43 @@ Specific constraints attributes:
     TYPE  = TYPE_SEQ_OF
     TAG   = 16
 
+    def set_default_val(self, include_optional=False):
+        """
+        """
+        # print("SEQ_OF:set_default_val('%s')" % self._name)
+        # print("_cont is %s" % str(self._cont))
+        # print("_root is %s" % str(self._root))
+        # print("_const_sz is %s" % str(self._const_sz))
+
+
+        # print("  internals")
+        # internals = self.get_internals()
+        # print("  %s" % str(internals))
+
+        # parent_internals = self._parent.get_internals()
+        # print("  Parent internals")
+        # print("  %s" % str(parent_internals))
+
+        if self._const_sz is not None:
+            size = self._const_sz.lb
+            # print("Only need %d sequence" % size)
+            self._val = []
+            for i in range(0, size):
+                # Construct an object
+                # print("type(self._cont) = %s" % type(self._cont))
+                seq_obj = self._cont
+                # print("type(seq_obj) = %s" % type(seq_obj))
+                seq_obj.set_default_val()
+                # print("seq_obj._val = %s" % str(seq_obj._val))
+                self._val.append(seq_obj._val)
+
+
+        # print("Leaving SEQ_OF:set_default_val('%s')" % self._name)
+        # print("self._val = %s" % str(self._val))
+        # print("***********************************************************************************************")
+        # print("***********************************************************************************************")
+        # print("***********************************************************************************************")
+
 
 class SET_OF(_CONSTRUCT_OF):
     __doc__ = """
@@ -2612,7 +2754,7 @@ Single value: Python list
 
 Specific attributes:
     
-    - cont: ASN1Obj instance, provides the content of the SEQUENCE OF object
+    - cont: ASN1Obj instance, provides the content of the SET OF object
     
 Specific constraints attributes:qq
     
@@ -2626,3 +2768,22 @@ Specific constraints attributes:qq
     TYPE  = TYPE_SET_OF
     TAG   = 17
 
+    def set_default_val(self, include_optional=False):
+        """
+        """
+        print("SET_OF:set_default_val('%s')" % self._name)
+        print("_cont is %s" % str(self._cont))
+        print("_root is %s" % str(self._root))
+        print("_const_sz is %s" % str(self._const_sz))
+        if self._const_sz is not None:
+            size = self._const_sz.lb
+            # print("Only need %d sequence" % size)
+            self._val = []
+            for i in range(0, size):
+                # Construct an object
+                # print("type(self._cont) = %s" % type(self._cont))
+                set_obj = self._cont
+                # print("type(set_obj) = %s" % type(set_obj))
+                set_obj.set_default_val()
+                # print("set_obj._val = %s" % str(set_obj._val))
+                self._val.append(set_obj._val)
