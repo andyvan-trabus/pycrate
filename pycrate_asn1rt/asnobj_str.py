@@ -100,23 +100,10 @@ Specific constraints attributes:
     _ASN_RE = re.compile('(?:\'([\s01]{0,})\'B)|(?:\'([\s0-9A-F]{0,})\'H)')
 
     def set_default_val(self, include_optional=False):
-        # print("BITSTR:set_default_val('%s')" % self._name)
-        # if self._cont is not None:
-            # print("_cont is %s" % str(self._cont))
-        # if self._const_cont is not None:
-            # print("_const_cont is %s" % str(self._const_cont))
         if self._const_sz is not None:
-            # print("_const_sz is %s" % str(self._const_sz))
-            # print("lb = %d" % self._const_sz.lb)
-            # print("ub = %d" % self._const_sz.ub)
             size = self._const_sz.lb
         else:
             size = 1
-
-        # print("_root is %s" % str(self._root))
-
-        # print(self._val)
-
         self._val = (0, size)
     
     # _ASN_WASC potentially add the ascii representation of the BIT STRING in comment
@@ -1098,24 +1085,11 @@ Specific constraints attributes:
     _ASN_RE = re.compile('(?:\'([\s01]{0,})\'B)|(?:\'([\s0-9A-F]{0,})\'H)')
 
     def set_default_val(self, include_optional=False):
-        # print("OCTSTR:set_default_val('%s')" % self._name)
-        # if self._cont is not None:
-            # print("_cont is %s" % str(self._cont))
-        # if self._const_cont is not None:
-            # print("_const_cont is %s" % str(self._const_cont))
         if self._const_sz is not None:
-            # print("_const_sz is %s" % str(self._const_sz))
-            # print("lb = %d" % self._const_sz.lb)
-            # print("ub = %d" % self._const_sz.ub)
             size = self._const_sz.lb
         else:
             # Need to set size
             size = 0
-        # print("_root is %s" % str(self._root))
-
-        # print(self._val)
-
-        # self._val = (0, size)
         if size > 0:
             self._val = b'0' * size
         else:

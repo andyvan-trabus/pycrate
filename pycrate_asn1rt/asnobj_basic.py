@@ -60,13 +60,7 @@ Single value: int 0
             raise(ASN1ObjErr('{0}: invalid value, {1!r}'.format(self.fullname(), val)))
 
     def set_default_val(self, include_optional=False):
-        """
-        Set default value
-        """
-        # print("NULL:set_default_val('%s')" % self._name)
-        # print("Before: self._val = %d" % self._val)
         self._val = 0
-        # print("After: self._val = %d" % self._val)
     
     ###
     # conversion between internal value and ASN.1 syntax
@@ -167,10 +161,6 @@ Single value: Python bool
             raise(ASN1ObjErr('{0}: invalid value, {1!r}'.format(self.fullname(), val)))
     
     def set_default_val(self, include_optional=False):
-        """
-        Set default value
-        """
-        # print("BOOL:set_default_val('%s')" % self._name)
         self._val = False
 
     ###
@@ -336,18 +326,12 @@ Specific attribute:
             raise(ASN1ObjErr('{0}: invalid named value, {1!r}'.format(self.fullname(), val)))
 
     def set_default_val(self, include_optional=False):
-        """
-        Set default value
-        """
-        # print("INT:set_default_val('%s')" % self._name)
         const_dict = self.get_const()
-        # print("const_dict = %s" % str(const_dict))
         if self._const_val:
             # Get constraints
             lb = self._const_val.lb
             self._val = lb
         else:
-            # print("Error: No _const_val on int")
             self._val = 0
     
     ###
@@ -626,12 +610,7 @@ Specific attribute:
         self._safechk_val_real(val)
     
     def set_default_val(self, include_optional=False):
-        """
-        Set default value
-        """
-        print("REAL:set_default_val('%s')" % self._name)
         const_dict = self.get_const()
-        print("const_dict = %s" % str(const_dict))
         # TODO: Implement constraint lookup for REAL
         self._val = (0, 0, 0)
 
@@ -1018,17 +997,9 @@ Specific attribute:
                 raise(ASN1ObjErr('{0}: invalid value, {1!r}'.format(self.fullname(), val)))
     
     def set_default_val(self, include_optional=False):
-        """
-        Set default value
-        """
-        # print("ENUM:set_default_val('%s')" % self._name)
-        # const_dict = self.get_const()
-        # print("const_dict = %s" % str(const_dict))
-
         # Get constraints
         allowed_values = self._root
         name_lowest = allowed_values[0]
-        # print("first enum name is '%s'" % name_lowest)
         self._val = name_lowest
 
     ###
