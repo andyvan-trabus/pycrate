@@ -1710,6 +1710,18 @@ pkts_nbiot = tuple(map(unhexlify, (
     '6040008090d20004345a20500ba010300e00',
     )))
 
+pkts_sib1 = tuple(map(unhexlify, (
+    '484c46901280009d93019059802105024966b600',
+    )))
+
+pkts_rrc = tuple(map(unhexlify, (
+    '6012980ffdd804bb007caa8b55349010800d00',
+    )))
+
+pkts_dcch = tuple(map(unhexlify, (
+    '4823fe80',
+    )))
+
 
 def _load_lteran():
     #try:
@@ -1790,6 +1802,47 @@ def _test_lteran():
             txt = NBIoT_SIB1.to_jer()
             NBIoT_SIB1.from_jer(txt)
             assert( NBIoT_SIB1() == val )
+    #
+    EUTRA_RRC_SIB1 = GLOBAL.MOD['EUTRA-RRC-Definitions']['BCCH-DL-SCH-Message']
+    for p in pkts_sib1:
+        EUTRA_RRC_SIB1.from_uper(p)
+        object_path = ['message', 'c1']
+        edit_object = EUTRA_RRC_SIB1.get_at(object_path)
+        internals = edit_object.get_internals()
+        choice_list = internals['root']
+        for choice in choice_list:
+            obj = edit_object._cont[choice]
+            obj.set_default_val()
+            edit_object._val = choice, obj._val
+            EUTRA_RRC_SIB1.set_val_at(object_path, edit_object._val)
+
+    #
+    EUTRA_RRC_CCCH = GLOBAL.MOD['EUTRA-RRC-Definitions']['DL-CCCH-Message']
+    for p in pkts_sib1:
+        EUTRA_RRC_CCCH.from_uper(p)
+        object_path = ['message', 'c1']
+        edit_object = EUTRA_RRC_CCCH.get_at(object_path)
+        internals = edit_object.get_internals()
+        choice_list = internals['root']
+        for choice in choice_list:
+            obj = edit_object._cont[choice]
+            obj.set_default_val()
+            edit_object._val = choice, obj._val
+            EUTRA_RRC_CCCH.set_val_at(object_path, edit_object._val)
+
+    #
+    EUTRA_RRC_DCCH = GLOBAL.MOD['EUTRA-RRC-Definitions']['DL-DCCH-Message']
+    for p in pkts_sib1:
+        EUTRA_RRC_DCCH.from_uper(p)
+        object_path = ['message', 'c1']
+        edit_object = EUTRA_RRC_DCCH.get_at(object_path)
+        internals = edit_object.get_internals()
+        choice_list = internals['root']
+        for choice in choice_list:
+            obj = edit_object._cont[choice]
+            obj.set_default_val()
+            edit_object._val = choice, obj._val
+            EUTRA_RRC_DCCH.set_val_at(object_path, edit_object._val)
 
 def test_lteran():
     _load_lteran()
