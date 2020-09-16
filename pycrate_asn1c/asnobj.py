@@ -43,14 +43,17 @@ from .dictobj import *
 #------------------------------------------------------------------------------#
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////////////#
 
-_DEBUG_PARAM       = False
-_DEBUG_PARAM_PT    = False
-_DEBUG_PARAM_VAL   = False
-_DEBUG_PARAM_SET   = False
-_DEBUG_PARAM_TYPE  = False
+_DEBUG_PARAM        = False
+_DEBUG_PARAM_PT     = False
+_DEBUG_PARAM_VAL    = False
+_DEBUG_PARAM_SET    = False
+_DEBUG_PARAM_TYPE   = False
 #
-_DEBUG_SYNTAX_GRP  = False
-_DEBUG_SYNTAX_OGRP = False
+_DEBUG_SYNTAX_GRP   = False
+_DEBUG_SYNTAX_OGRP  = False
+#
+_DEBUG_SET_VAL      = False
+
 
 # method tracer, to be used as a decorator
 #_TRACE_NAME = ['ROS', ]
@@ -4407,8 +4410,6 @@ class ASN1Obj(object):
         if not partial:
             # ensure all mandatory components have been constrained
             if not all([ident in done for ident in self.get_root_mand()]):
-                asnlog('WNG: {0}.{1}, missing mandatory components in WITH COMPONENTS'\
-                       .format(GLOBAL.COMP['NS']['mod'], self.fullname()))
                 raise(ASN1ProcTextErr(
                       '{0}: missing mandatory components in WITH COMPONENTS'\
                       .format(self.fullname())))
@@ -4957,15 +4958,32 @@ class ASN1Obj(object):
               .format(self.fullname(), text)))
         
     def __parse_value_bitstr_offsets(self, val):
+        # val: set of offsets
         # returns the integral value and the minimum number of bits 
         # for the set of offsets
-        # TODO: take SIZE constraint into account ?
         if val is None:
             # null length bit string
             val = [0, 0]
         else:
-            blen = max(val)
-            val = [sum([1<<(blen-i) for i in val]), blen]
+            moff = max(val)
+            val  = [sum([1<<(moff-i) for i in val]), 1+moff]
+        # take potential SIZE constraint into account
+        Consts_sz = [C for C in self.get_const() if C['type'] == CONST_SIZE]
+        if Consts_sz:
+            # size is a set of INTEGER values
+            Const_sz = reduce_setdicts(Consts_sz)
+            # check if there is a root lower bound, without defined extension
+            if Const_sz.root and Const_sz.ext is None:
+                lb = Const_sz.root[0]
+                # lb can be a single int value or an ASN1RangeInt
+                if hasattr(lb, 'lb'):
+                    lb = lb.lb
+                if lb is None:
+                    lb = 0
+                assert( isinstance(lb, integer_types) and lb >= 0 )
+                if val[1] < lb:
+                    diff = lb - val[1]
+                    val = [val[0] << diff, val[1] + diff]
         self.select_set(_path_cur(), val)
     
     def _parse_value_octstr(self, text):
@@ -5765,9 +5783,10 @@ class ASN1Obj(object):
                 # because parse_value() is used and cannot implement such control
                 if len(val[dom]) >= 2 and len(val[dom]) == len_val + 1 \
                 and val[dom][-1] in val[dom][:-1]:
-                    print('WNG: {0}.{1}, duplicated value in {2} set: {3}'\
-                          .format(GLOBAL.COMP['NS']['mod'], self.fullname(), dom,
-                                  repr(val[dom][-1]).replace('\n', '')))
+                    if _DEBUG_SET_VAL:
+                        asnlog('DBG: {0}.{1}, duplicated value in {2} set: {3}'\
+                               .format(GLOBAL.COMP['NS']['mod'], self.fullname(), dom,
+                                       repr(val[dom][-1]).replace('\n', '')))
                     del val[dom][-1]
             # 
             self.__parse_set_comp_path_unconfig()
@@ -5801,9 +5820,10 @@ class ASN1Obj(object):
                 # because parse_value() is used and cannot implement such control
                 if len(val[dom]) >= 2 and len(val[dom]) == len_val + 1 \
                 and val[dom][-1] in val[dom][:-1]:
-                    print('WNG: {0}.{1}, duplicated value in {2} set: {3}'\
-                          .format(GLOBAL.COMP['NS']['mod'], self.fullname(), dom,
-                                  repr(val[dom][-1]).replace('\n', '')))
+                    if _DEBUG_SET_VAL:
+                        asnlog('DBG: {0}.{1}, duplicated value in {2} set: {3}'\
+                               .format(GLOBAL.COMP['NS']['mod'], self.fullname(), dom,
+                                       repr(val[dom][-1]).replace('\n', '')))
                     del val[dom][-1]
             #
             self.__parse_set_comp_path_unconfig()
