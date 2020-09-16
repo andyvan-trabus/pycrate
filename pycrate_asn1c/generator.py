@@ -27,6 +27,8 @@
 # *--------------------------------------------------------
 #*/
 
+import copy
+
 from .utils  import *
 from .glob   import *
 from .setobj import *
@@ -705,8 +707,8 @@ class PycrateGenerator(_Generator):
         self.gen_const_val(Obj)
     
     def gen_type_seqof(self, Obj):
-        # component constraint (need to add support for WITH COMPONENT in the compiler)
-        #self.gen_const_comp(Obj)
+        # component constraint
+        self.gen_const_comp(Obj)
         # content: ASN1Obj
         if Obj._cont is not None:
             # create the object of the content first
@@ -892,24 +894,11 @@ class PycrateGenerator(_Generator):
                 self.wrl('{0}._const_cont = {1}'.format(Obj._pyname, Const['obj']._pyname))
     
     def gen_const_comp(self, Obj):
-        # WITH COMPONENT constraint: processing only a single constraint
+        # WITH COMPONENT constraint
         Consts_comp = [C for C in Obj._const if C['type'] == CONST_COMP]
         if Consts_comp:
-            if len(Consts_comp) > 1 or Consts_comp[0]['ext'] is not None \
-            or len(Consts_comp[0]['root']) > 1:
-                asnlog('WNG: {0}.{1}: multiple WITH COMPONENT constraints, compiling '\
-                       'only the first'.format(self._mod_name, Obj._name))
-            Const = Consts_comp[0]['root'][0]
-            #print('>>> applying WITH COMPONENT constraint to %s (%s): %r' % (Obj._name, Obj.TYPE, Const))
-            # 1) eventually duplicate and clone the content of the referred object
-            tr = Obj
-            while Obj._cont is None:
-                tr = tr.get_typeref()
-                if tr._cont is not None:
-                    Obj._cont = tr._cont.__class__(Obj._cont)
-            # 2) apply additional constraint on the component
-            assert()
-            Obj._cont._const.extend(Const[ident]['const'])
+            # TODO: need to add support for WITH COMPONENT in the compiler
+            pass
     
     def gen_const_comps(self, Obj):
         # WITH COMPONENTS constraint: processing only a single constraint
@@ -925,62 +914,47 @@ class PycrateGenerator(_Generator):
                 return
             if len(Consts_comps[0]['root']) > 1:
                 asnlog('WNG: {0}.{1}: multiple root parts in WITH COMPONENTS constraint, '\
-                       'only stacking presence'.format(self._mod_name, Obj._name))
+                       'processing only the common components'.format(self._mod_name, Obj._name))
             #
-            # 1) duplicate and clone the content of the referred object or local content
+            # 1) duplicate the content structure of the object
             if not Obj._cont:
-                tr = Obj
-                while Obj._cont is None:
-                    tr = tr.get_typeref()
-                    if tr._cont is not None:
-                        Obj._cont = tr._cont.copy()
-                        if tr._ext is not None:
-                            Obj._ext = list(tr._ext)
-                        for ident in Obj._cont:
-                            Obj._cont[ident] = Obj._cont[ident].__class__(Obj._cont[ident])
+                cont, Obj._ext = Obj.get_cont(wext=True)
+                Obj._cont = cont.copy()
             else:
                 Obj._cont = Obj._cont.copy()
-                for ident in Obj._cont:
-                    Obj._cont[ident] = Obj._cont[ident].__class__(Obj._cont[ident])
+            for ident, Comp in Obj._cont.items():
+                Obj._cont[ident] = Comp.__class__(Comp)
             #
             # 2) handle absent / present components
-            # gathering present / absent components
-            pres, abse = set(), set()
-            for Const in Consts_comps[0]['root']:
-                pres.update(Const['_pre'])
-                abse.update(Const['_abs'])
-            # for components that are said to be both present or absent (yes, that exists...)
-            # simply leave them as OPTIONAL
-            rem = pres.intersection(abse)
-            pres.difference_update(rem)
-            abse.difference_update(rem)
+            # gathering present / absent components from the potentially 
+            # multiple possibilities, and keeping only the ones in common
+            pres, abse = set(Consts_comps[0]['root'][0]['_pre']), set(Consts_comps[0]['root'][0]['_abs'])
+            for Const in Consts_comps[0]['root'][1:]:
+                pres.intersection_update(Const['_pre'])
+                abse.intersection_update(Const['_abs'])
             for ident in abse:
                 # remove the component
                 del Obj._cont[ident]
-            if pres:
-                if Obj.TYPE == TYPE_CHOICE:
-                    # CHOICE object: a component marked PRESENT is the only 
-                    # selectable one, removing all others
-                    assert( len(pres) == 1 )
-                    pres = pres.pop()
-                    for ident in Obj._cont:
-                        if ident != pres:
-                            del Obj._cont[ident]
-                else:
-                    # SEQUENCE-like object: make the component mandatory
-                    for ident in pres:
-                        if FLAG_OPT in Obj._cont[ident]._flag:
-                            del Obj._cont[ident]._flag[FLAG_OPT]
+            if Obj.TYPE != TYPE_CHOICE:
+                # for CHOICE, the constraint parsing takes care to set in _abs
+                # all components to be removed, when a component is set in _pre
+                # therefore, present components only need to be set as non optional
+                # for SEQUENCE
+                for ident in pres:
+                    if FLAG_OPT in Obj._cont[ident]._flag:
+                        del Obj._cont[ident]._flag[FLAG_OPT]
             #
             # 3) apply additional constraint on components
-            # only if single constraint
+            # only if we have a single root component in the constraint
             if len(Consts_comps[0]['root']) == 1:
                 Const    = Consts_comps[0]['root'][0]
                 Const_kw = set(Const.keys())
                 Const_kw.remove('_pre')
                 Const_kw.remove('_abs')
                 for ident in Const_kw:
+                    Obj._cont[ident]._const = list(Obj._cont[ident]._const)
                     Obj._cont[ident]._const.extend(Const[ident]['const'])
+                    #print('%s.%s: %r' % (Obj._name, ident, Obj._cont[ident]._const))
 
 
 #------------------------------------------------------------------------------#
